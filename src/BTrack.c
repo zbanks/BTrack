@@ -1,7 +1,8 @@
 //=======================================================================
-/** @file BTrack.cpp
+/** @file BTrack.c
  *  @brief BTrack - a real-time beat tracker
- *  @author Adam Stark
+ *  @author Zach Banks, Adam Stark
+ *  @copyright Copyright (C) 2015 Zach Banks
  *  @copyright Copyright (C) 2008-2014  Queen Mary University of London
  *
  * This program is free software: you can redistribute it and/or modify
