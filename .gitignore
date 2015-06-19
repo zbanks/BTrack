@@ -1,11 +1,12 @@
-python-module/build
-unit-tests/Build
-xcuserdata
 .DS_Store
 
 *.o
+*.d
 *.dylib
 
 *.xcworkspace
 
-modules-and-plug-ins/max-external/build
+*.swp
+*.swn
+*.swo
+

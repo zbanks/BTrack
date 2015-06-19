@@ -1,6 +1,11 @@
 BTrack - A Real-Time Beat Tracker
 =================================
 
+A C port of BTrack.
+
+Original Readme
+===============
+
 ** Version 1.0.2 **
 
 *by Adam Stark, Matthew Davies and Mark Plumbley.*
