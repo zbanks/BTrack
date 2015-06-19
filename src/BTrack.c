@@ -22,21 +22,8 @@
 
 #include "BTrack.h"
 #include "samplerate.h"
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "common.h"
 
-#define true 1
-#define false 0
-
-#ifndef M_PI
-#define M_PI 3.14159265359
-#endif
-
-#define MIN(x, y) (x < y) ? x : y
-#define MAX(x, y) (x > y) ? x : y
-
-#define ASSERT(x) if(x){fprintf(stderr,"Error, assertion failed: " __FILE__ " line %d.\n", __LINE__);}
 
 static void resampleOnsetDetectionFunction(struct btrack * bt);
 static void calculateTempo(struct btrack * bt);
