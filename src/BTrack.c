@@ -23,11 +23,11 @@
 #include "BTrack.h"
 #include "samplerate.h"
 #include <math.h>
-#include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define true 1
-#define false 1
+#define false 0
 
 #ifndef M_PI
 #define M_PI 3.14159265359
@@ -35,6 +35,8 @@
 
 #define MIN(x, y) (x < y) ? x : y
 #define MAX(x, y) (x > y) ? x : y
+
+#define ASSERT(x) if(x){fprintf(stderr,"Error, assertion failed: " __FILE__ " line %d.\n", __LINE__);}
 
 static void resampleOnsetDetectionFunction(struct btrack * bt);
 static void calculateTempo(struct btrack * bt);
@@ -53,11 +55,11 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size){
 
 	bt->onsetDFBufferSize = (512*512)/bt->hopSize;		// calculate df buffer size
     bt->onsetDF = malloc(bt->onsetDFBufferSize * sizeof(double));
-    assert(bt->onsetDF);
+    ASSERT(bt->onsetDF);
     bt->cumulativeScore = malloc(bt->onsetDFBufferSize * sizeof(double));
-    assert(bt->cumulativeScore);
+    ASSERT(bt->cumulativeScore);
     bt->w1 = malloc((1 + bt->onsetDFBufferSize) * sizeof(double));
-    assert(bt->w1);
+    ASSERT(bt->w1);
 
     rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceHWR, HanningWindow);
     if(rc < 0){
@@ -266,7 +268,7 @@ void btrack_nofix_bpm(struct btrack * bt){
 static void resampleOnsetDetectionFunction(struct btrack * bt) {
 	float output[512];
     float * input = malloc(bt->onsetDFBufferSize * sizeof(float));
-    assert(input);
+    ASSERT(input);
     
     for (int i = 0;i < bt->onsetDFBufferSize;i++) {
         input[i] = (float) bt->onsetDF[i];
@@ -519,9 +521,9 @@ static void predictBeat(struct btrack * bt){
 	//double futureCumulativeScore[onsetDFBufferSize + windowSize];
     //double w2[windowSize];
     double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize) * sizeof(double));
-    assert(futureCumulativeScore);
+    ASSERT(futureCumulativeScore);
     double * w2 = malloc(windowSize * sizeof(double));
-    assert(w2);
+    ASSERT(w2);
 
 	// copy cumscore to first part of fcumscore
 	for (int i = 0;i < bt->onsetDFBufferSize;i++) {

@@ -57,7 +57,7 @@ enum WindowType
 struct odf {
 	int frameSize;						/**< audio framesize */
 	int hopSize;						/**< audio hopsize */
-	enum OnsetDetectionFunctionType onsetDetectionFunctionType;		/**< type of detection function */
+	enum OnsetDetectionFunctionType type;		/**< type of detection function */
     enum WindowType windowType;                     /**< type of window used in calculations */
 	
 	fftw_plan p;						/**< fftw plan */
@@ -76,7 +76,7 @@ struct odf {
 	
     double * phase;                     /**< FFT phase values */
     double * prevPhase;                 /**< previous phase values */
-    double * revPhase2;                 /**< second order previous phase values */
+    double * prevPhase2;                 /**< second order previous phase values */
 
 };
 
