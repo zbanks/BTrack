@@ -11,4 +11,4 @@
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX(x, y) ((x) > (y)) ? (x) : (y)
 
-#define ASSERT(x) if(x){fprintf(stderr,"Error, assertion failed: " __FILE__ " line %d.\n", __LINE__);}
+#define ASSERT(x) if(!x){fprintf(stderr,"Error, assertion failed: " __FILE__ " line %d.\n", __LINE__); exit(EXIT_FAILURE);}

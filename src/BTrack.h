@@ -89,4 +89,6 @@ void btrack_set_bpm(struct btrack * bt, double bpm);
 void btrack_fix_bpm(struct btrack * bt, double bpm);
 void btrack_nofix_bpm(struct btrack * bt);
 
+void btrack_set_hop_size(struct btrack * bt, int hop_size);
+
 #endif

@@ -40,20 +40,8 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size){
     bt->hopSize = hop_size;
     bt->frameSize = frame_size;
 
-	bt->onsetDFBufferSize = (512*512)/bt->hopSize;		// calculate df buffer size
-    bt->onsetDF = malloc(bt->onsetDFBufferSize * sizeof(double));
-    ASSERT(bt->onsetDF);
-    bt->cumulativeScore = malloc(bt->onsetDFBufferSize * sizeof(double));
-    ASSERT(bt->cumulativeScore);
-    bt->w1 = malloc((1 + bt->onsetDFBufferSize) * sizeof(double));
-    ASSERT(bt->w1);
-
-    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceHWR, HanningWindow);
-    if(rc < 0){
-        free(bt->onsetDF);
-        free(bt->cumulativeScore);
-        return -1;
-    }
+    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceHWR, HanningWindow); 
+    ASSERT(!rc);
 
     double rayparam = 43;
 	double pi = M_PI;
@@ -100,6 +88,9 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size){
     // in case it is requested before any processing takes place
     bt->latestCumulativeScoreValue = 0;
     bt->latestODF = 0;
+
+    btrack_set_hop_size(bt, hop_size);
+    return 0;
 }
 
 void btrack_del(struct btrack * bt){
@@ -148,6 +139,7 @@ void btrack_process_odf_sample(struct btrack * bt, double odf_sample){
 	
 	// add new sample at the end
 	bt->onsetDF[bt->onsetDFBufferSize-1] = odf_sample;
+    bt->latestODF = odf_sample;
 	
 	// update cumulative score
 	updateCumulativeScore(bt, odf_sample);
@@ -248,6 +240,36 @@ void btrack_fix_bpm(struct btrack * bt, double bpm){
 void btrack_nofix_bpm(struct btrack * bt){
 	// set the tempo fix flag
 	bt->tempoFixed = false;
+}
+
+void btrack_set_hop_size(struct btrack * bt, int hop_size){
+    bt->hopSize = hop_size;
+	bt->onsetDFBufferSize = (512*512)/bt->hopSize;		// calculate df buffer size
+
+    free(bt->onsetDF);
+    bt->onsetDF = malloc(bt->onsetDFBufferSize * sizeof(double));
+    ASSERT(bt->onsetDF);
+
+    free(bt->cumulativeScore);
+    bt->cumulativeScore = malloc(bt->onsetDFBufferSize * sizeof(double));
+    ASSERT(bt->cumulativeScore);
+
+    free(bt->w1);
+    bt->w1 = malloc((1 + bt->onsetDFBufferSize) * sizeof(double));
+    ASSERT(bt->w1);
+
+    bt->onsetDFBufferSize = (512*512)/bt->hopSize;      // calculate df buffer size
+    
+    bt->beatPeriod = round(60/((((double) bt->hopSize)/44100)*bt->tempo));
+
+    // initialise df_buffer to zeros
+    for (int i = 0;i < bt->onsetDFBufferSize;i++) {
+        bt->onsetDF[i] = 0;
+        bt->cumulativeScore[i] = 0;
+        if ((i %  ((int) round(bt->beatPeriod))) == 0) {
+            bt->onsetDF[i] = 1;
+        }
+    }
 }
 
 //=======================================================================
@@ -507,9 +529,9 @@ static void predictBeat(struct btrack * bt){
 	int windowSize = (int) bt->beatPeriod;
 	//double futureCumulativeScore[onsetDFBufferSize + windowSize];
     //double w2[windowSize];
-    double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize) * sizeof(double));
+    double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize + 1) * sizeof(double));
     ASSERT(futureCumulativeScore);
-    double * w2 = malloc(windowSize * sizeof(double));
+    double * w2 = malloc((windowSize + 1) * sizeof(double));
     ASSERT(w2);
 
 	// copy cumscore to first part of fcumscore

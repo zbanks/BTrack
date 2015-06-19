@@ -23,7 +23,6 @@
 #include "OnsetDetectionFunction.h"
 #include "common.h"
 
-static double calculateOnsetDetectionFunctionSample(struct odf * odf, double *buffer);
 static void performFFT(struct odf * odf);
 static double princarg(double phaseVal);
 
@@ -101,6 +100,7 @@ int odf_init(struct odf * odf, int hop_size, int frame_size, enum OnsetDetection
 	odf->p = fftw_plan_dft_1d(frame_size, odf->complexIn, odf->complexOut, FFTW_FORWARD, FFTW_ESTIMATE);	// FFT plan initialisation
 	
 	odf->initialised = true;
+    return 0;
 }
 
 void odf_del(struct odf * odf){
@@ -116,8 +116,7 @@ void odf_set_type(struct odf * odf, enum OnsetDetectionFunctionType type){
     odf->type = type;
 }
 
-//=======================================================================
-static double calculateOnsetDetectionFunctionSample(struct odf * odf, double *buffer) {	
+double odf_calculate_sample(struct odf * odf, double * buffer){
 	double odfSample;
 		
 	// shift audio samples back in frame by hop size
