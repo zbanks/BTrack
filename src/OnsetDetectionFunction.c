@@ -32,7 +32,9 @@ static double spectralDifference(struct odf * odf);
 static double spectralDifferenceHWR(struct odf * odf);
 static double phaseDeviation(struct odf * odf);
 static double complexSpectralDifference(struct odf * odf);
+static double complexSpectralDifferenceSq(struct odf * odf);
 static double complexSpectralDifferenceHWR(struct odf * odf);
+static double complexSpectralDifferenceSqHWR(struct odf * odf);
 static double highFrequencyContent(struct odf * odf);
 static double highFrequencySpectralDifference(struct odf * odf);
 static double highFrequencySpectralDifferenceHWR(struct odf * odf);
@@ -156,9 +158,17 @@ double odf_calculate_sample(struct odf * odf, double * buffer){
             // calcualte complex spectral difference detection function sample
 			odfSample = complexSpectralDifference(odf);
 			break;
+		case ComplexSpectralDifferenceSq:
+            // calcualte complex spectral difference squared detection function sample
+			odfSample = complexSpectralDifferenceSq(odf);
+			break;
 		case ComplexSpectralDifferenceHWR:
             // calcualte complex spectral difference detection function sample (half-wave rectified)
 			odfSample = complexSpectralDifferenceHWR(odf);
+			break;
+		case ComplexSpectralDifferenceSqHWR:
+            // calcualte complex spectral difference detection squared function sample (half-wave rectified)
+			odfSample = complexSpectralDifferenceSqHWR(odf);
 			break;
 		case HighFrequencyContent:
             // calculate high frequency content detection function sample
@@ -333,7 +343,6 @@ static double phaseDeviation(struct odf * odf){
 double complexSpectralDifference(struct odf * odf){
 	double dev,pdev;
 	double sum = 0;
-	double mag_diff,phase_diff;
 	double value;
 	
 	// perform the FFT
@@ -352,15 +361,46 @@ double complexSpectralDifference(struct odf * odf){
 		
 		// wrap into [-pi,pi] range
 		pdev = princarg(dev);	
+
+        // Calculate the euclidean distance between previous frame & expected current frame
+        value = sqrt(pow(odf->magSpec[i], 2) + pow(odf->prevMagSpec[i], 2) - 2 * odf->magSpec[i] * odf->prevMagSpec[i] * cos(pdev));
+	
+		// add to sum
+		sum = sum + value;
 		
-		// calculate magnitude difference (real part of Euclidean distance between complex frames)
-		mag_diff = odf->magSpec[i] - odf->prevMagSpec[i];
+		// store values for next calculation
+		odf->prevPhase2[i] = odf->prevPhase[i];
+		odf->prevPhase[i] = odf->phase[i];
+		odf->prevMagSpec[i] = odf->magSpec[i];
+	}
+	
+	return sum;		
+}
+
+double complexSpectralDifferenceSq(struct odf * odf){
+	double dev,pdev;
+	double sum = 0;
+	double value;
+	
+	// perform the FFT
+	performFFT(odf);
+	
+	// compute phase values from fft output and sum deviations
+	for (int i = 0;i < odf->frameSize;i++) {
+		// calculate phase value
+		odf->phase[i] = atan2(odf->complexOut[i][1],odf->complexOut[i][0]);
 		
-		// calculate phase difference (imaginary part of Euclidean distance between complex frames)
-		phase_diff = -odf->magSpec[i]*sin(pdev);
+		// calculate magnitude value
+		odf->magSpec[i] = sqrt(pow(odf->complexOut[i][0],2) + pow(odf->complexOut[i][1],2));
 		
-		// square real and imaginary parts, sum and take square root
-		value = sqrt(pow(mag_diff,2) + pow(phase_diff,2));
+		// phase deviation
+		dev = odf->phase[i] - (2*odf->prevPhase[i]) + odf->prevPhase2[i];
+		
+		// wrap into [-pi,pi] range
+		pdev = princarg(dev);	
+
+        // Calculate the euclidean distance squared between previous frame & expected current frame
+        value = (pow(odf->magSpec[i], 2) + pow(odf->prevMagSpec[i], 2) - 2 * odf->magSpec[i] * odf->prevMagSpec[i] * cos(pdev));
 	
 		// add to sum
 		sum = sum + value;
@@ -377,7 +417,7 @@ double complexSpectralDifference(struct odf * odf){
 double complexSpectralDifferenceHWR(struct odf * odf) {
 	double dev,pdev;
 	double sum = 0;
-	double mag_diff,phase_diff;
+	double mag_diff;
 	double value;
 	
 	// perform the FFT
@@ -396,17 +436,56 @@ double complexSpectralDifferenceHWR(struct odf * odf) {
 		// wrap into [-pi,pi] range
 		pdev = princarg(dev);	
 		
+		// calculate magnitude difference (real part of Euclidean distance between complex frames)
+		mag_diff = odf->magSpec[i] - odf->prevMagSpec[i];
+		
+		// if we have a positive change in magnitude, then include in sum, otherwise ignore (half-wave rectification)
+		if (mag_diff > 0) {
+            // Calculate the euclidean distance between previous frame & expected current frame
+            value = sqrt(pow(odf->magSpec[i], 2) + pow(odf->prevMagSpec[i], 2) - 2 * odf->magSpec[i] * odf->prevMagSpec[i] * cos(pdev));
+		
+			// add to sum
+			sum = sum + value;
+		}
+		
+		// store values for next calculation
+		odf->prevPhase2[i] = odf->prevPhase[i];
+		odf->prevPhase[i] = odf->phase[i];
+		odf->prevMagSpec[i] = odf->magSpec[i];
+	}
+	
+	return sum;		
+}
+
+double complexSpectralDifferenceSqHWR(struct odf * odf) {
+	double dev,pdev;
+	double sum = 0;
+	double mag_diff;
+	double value;
+	
+	// perform the FFT
+	performFFT(odf);
+	
+	// compute phase values from fft output and sum deviations
+	for (int i = 0;i < odf->frameSize;i++) {
+		// calculate phase value
+		odf->phase[i] = atan2(odf->complexOut[i][1],odf->complexOut[i][0]);
+		// calculate magnitude value
+		odf->magSpec[i] = sqrt(pow(odf->complexOut[i][0],2) + pow(odf->complexOut[i][1],2));
+		
+		// phase deviation
+		dev = odf->phase[i] - (2*odf->prevPhase[i]) + odf->prevPhase2[i];
+		
+		// wrap into [-pi,pi] range
+		pdev = princarg(dev);	
 		
 		// calculate magnitude difference (real part of Euclidean distance between complex frames)
 		mag_diff = odf->magSpec[i] - odf->prevMagSpec[i];
 		
 		// if we have a positive change in magnitude, then include in sum, otherwise ignore (half-wave rectification)
 		if (mag_diff > 0) {
-			// calculate phase difference (imaginary part of Euclidean distance between complex frames)
-			phase_diff = -odf->magSpec[i]*sin(pdev);
-
-			// square real and imaginary parts, sum and take square root
-			value = sqrt(pow(mag_diff,2) + pow(phase_diff,2));
+            // Calculate the euclidean distance squared between previous frame & expected current frame
+            value = (pow(odf->magSpec[i], 2) + pow(odf->prevMagSpec[i], 2) - 2 * odf->magSpec[i] * odf->prevMagSpec[i] * cos(pdev));
 		
 			// add to sum
 			sum = sum + value;

@@ -35,7 +35,9 @@ enum OnsetDetectionFunctionType
     SpectralDifferenceHWR,
     PhaseDeviation,
     ComplexSpectralDifference,
+    ComplexSpectralDifferenceSq,
     ComplexSpectralDifferenceHWR,
+    ComplexSpectralDifferenceSqHWR,
     HighFrequencyContent,
     HighFrequencySpectralDifference,
     HighFrequencySpectralDifferenceHWR

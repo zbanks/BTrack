@@ -40,7 +40,7 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size){
     bt->hopSize = hop_size;
     bt->frameSize = frame_size;
 
-    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceHWR, HanningWindow); 
+    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceSq, HanningWindow); 
     ASSERT(!rc);
 
     double rayparam = 43;
