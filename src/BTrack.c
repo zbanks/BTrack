@@ -544,7 +544,7 @@ static void updateCumulativeScore(struct btrack * bt, double odfSample) {
 
 static void predictBeat(struct btrack * bt){
 	int windowSize = (int) bt->beatPeriod;
-	double futureCumulativeScore[onsetDFBufferSize + windowSize + 1];
+	double futureCumulativeScore[bt->onsetDFBufferSize + windowSize + 1];
     double w2[windowSize + 1];
     //double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize + 1) * sizeof(double));
     //ASSERT(futureCumulativeScore);
