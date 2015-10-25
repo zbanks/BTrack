@@ -60,6 +60,7 @@ struct btrack {
     double estimatedTempo;                  /**< the current tempo estimation being used by the algorithm */
     double latestCumulativeScoreValue;      /**< holds the latest value of the cumulative score function */
     double latestODF;                       /**< holds the latest value of the onset detection function*/
+    double latestConfidence;                /**< holds the latest confidence value, the ratio between max score & min score in the last beat */
     double tempoToLagFactor;                /**< factor for converting between lag and tempo */
     int m0;                                 /**< indicates when the next point to predict the next beat is */
     int beatCounter;                        /**< keeps track of when the next beat is - will be zero when the beat is due, and is set elsewhere in the algorithm to be positive once a beat prediction is made */
@@ -84,6 +85,8 @@ int btrack_beat_due_in_current_frame(struct btrack * bt);
 double btrack_get_bpm(struct btrack * bt);
 double btrack_get_latest_score(struct btrack * bt);
 double btrack_get_latest_odf(struct btrack * bt);
+double btrack_get_latest_confidence(struct btrack * bt);
+int btrack_get_frames_until_beat(struct btrack * bt);
 
 void btrack_set_bpm(struct btrack * bt, double bpm);
 void btrack_fix_bpm(struct btrack * bt, double bpm);

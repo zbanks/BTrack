@@ -115,6 +115,14 @@ double btrack_get_latest_odf(struct btrack * bt){
     return bt->latestODF;
 }
 
+double btrack_get_latest_confidence(struct btrack * bt){
+    return bt->latestConfidence;
+}
+
+int btrack_get_frames_until_beat(struct btrack * bt) {
+    return bt->beatCounter;
+}
+
 void btrack_process_audio_frame(struct btrack * bt, double * frame){
     double sample = odf_calculate_sample(&bt->odf, frame);
     btrack_process_odf_sample(bt, sample);
@@ -487,7 +495,7 @@ static void normaliseArray(double * array, int N){
 
 static void updateCumulativeScore(struct btrack * bt, double odfSample) {	 
 	int start, end, winsize;
-	double max;
+	double max, maxw, min;
 	
 	start = bt->onsetDFBufferSize - round(2*bt->beatPeriod);
 	end = bt->onsetDFBufferSize - round(bt->beatPeriod/2);
@@ -504,12 +512,20 @@ static void updateCumulativeScore(struct btrack * bt, double odfSample) {
 	}	
 	
 	// calculate new cumulative score value
-	max = 0;
+	maxw = 0;
+    max = 0;
+    min = bt->cumulativeScore[start];
 	int n = 0;
 	for (int i=start;i <= end;i++) {
         wcumscore = bt->cumulativeScore[i]*bt->w1[n];
-        if (wcumscore > max) {
-            max = wcumscore;
+        if (wcumscore > maxw) {
+            maxw = wcumscore;
+        }
+        if (bt->cumulativeScore[i] < min) {
+            min = bt->cumulativeScore[i];
+        }
+        if (bt->cumulativeScore[i] > max) {
+            max = bt->cumulativeScore[i];
         }
 		n++;
 	}
@@ -521,18 +537,19 @@ static void updateCumulativeScore(struct btrack * bt, double odfSample) {
 	}
 	
 	// add new value to cumulative score
-	bt->cumulativeScore[bt->onsetDFBufferSize-1] = ((1-bt->alpha)*odfSample) + (bt->alpha*max);
+	bt->cumulativeScore[bt->onsetDFBufferSize-1] = ((1-bt->alpha)*odfSample) + (bt->alpha*maxw);
 	bt->latestCumulativeScoreValue = bt->cumulativeScore[bt->onsetDFBufferSize-1];
+    bt->latestConfidence = 1.0 - (min / max);
 }
 
 static void predictBeat(struct btrack * bt){
 	int windowSize = (int) bt->beatPeriod;
-	//double futureCumulativeScore[onsetDFBufferSize + windowSize];
-    //double w2[windowSize];
-    double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize + 1) * sizeof(double));
-    ASSERT(futureCumulativeScore);
-    double * w2 = malloc((windowSize + 1) * sizeof(double));
-    ASSERT(w2);
+	double futureCumulativeScore[onsetDFBufferSize + windowSize + 1];
+    double w2[windowSize + 1];
+    //double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize + 1) * sizeof(double));
+    //ASSERT(futureCumulativeScore);
+    //double * w2 = malloc((windowSize + 1) * sizeof(double));
+    //ASSERT(w2);
 
 	// copy cumscore to first part of fcumscore
 	for (int i = 0;i < bt->onsetDFBufferSize;i++) {
@@ -596,6 +613,6 @@ static void predictBeat(struct btrack * bt){
 	// set next prediction time
 	bt->m0 = bt->beatCounter+round(bt->beatPeriod/2);
 
-    free(futureCumulativeScore);
-    free(w2);
+    //free(futureCumulativeScore);
+    //free(w2);
 }
