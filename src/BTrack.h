@@ -34,6 +34,7 @@
 struct btrack {
     struct odf odf;
     int frameSize;
+    double invSampleRate;
     double * onsetDF;                       /**< to hold onset detection function */
     double * cumulativeScore;               /**< to hold cumulative score */
     double * w1;
@@ -75,18 +76,20 @@ struct btrack {
 * @param hop_size the hop size in audio samples
 * @param frame_size the frame size in audio samples
 */
-int btrack_init(struct btrack * bt, int hop_size, int frame_size);
+int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rate);
 void btrack_del(struct btrack * bt);
 
-void btrack_process_audio_frame(struct btrack * bt, double * frame);
+void btrack_process_audio_frame(struct btrack * bt, const btrack_chunk_t * frame);
+void btrack_process_fft_frame(struct btrack * bt, const btrack_chunk_t * fft_frame);
 void btrack_process_odf_sample(struct btrack * bt, double odf_sample);
 
-int btrack_beat_due_in_current_frame(struct btrack * bt);
-double btrack_get_bpm(struct btrack * bt);
-double btrack_get_latest_score(struct btrack * bt);
-double btrack_get_latest_odf(struct btrack * bt);
-double btrack_get_latest_confidence(struct btrack * bt);
-int btrack_get_frames_until_beat(struct btrack * bt);
+int btrack_beat_due_in_current_frame(const struct btrack * bt);
+double btrack_get_bpm(const struct btrack * bt);
+double btrack_get_latest_score(const struct btrack * bt);
+double btrack_get_latest_odf(const struct btrack * bt);
+double btrack_get_latest_confidence(const struct btrack * bt);
+int btrack_get_frames_until_beat(const struct btrack * bt);
+double btrack_get_time_until_beat(const struct btrack * bt);
 
 void btrack_set_bpm(struct btrack * bt, double bpm);
 void btrack_fix_bpm(struct btrack * bt, double bpm);

@@ -35,13 +35,15 @@ static void normaliseArray(double * array, int N);
 static void updateCumulativeScore(struct btrack * bt, double odfSample);
 static void predictBeat(struct btrack * bt);
 
-int btrack_init(struct btrack * bt, int hop_size, int frame_size){
+// Ex. hop_size = 512; frame_size = 1024
+int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rate){
     int rc = 0;
     bt->hopSize = hop_size;
     bt->frameSize = frame_size;
+    bt->invSampleRate = 1.0 / (double) sample_rate;
 
     rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceSq, HanningWindow); 
-    ASSERT(!rc);
+    BTRACK_ASSERT(rc == 0);
 
     double rayparam = 43;
 	double pi = M_PI;
@@ -51,7 +53,7 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size){
 	bt->alpha = 0.9;
 	bt->tempo = 120;
 	bt->estimatedTempo = 120.0;
-	bt->tempoToLagFactor = 60.*44100./512.;
+	bt->tempoToLagFactor = 60.* (double) sample_rate / (double) hop_size;
 	
 	bt->m0 = 10;
 	bt->beatCounter = -1;
@@ -99,32 +101,42 @@ void btrack_del(struct btrack * bt){
     odf_del(&bt->odf);
 }
 
-int btrack_beat_due_in_current_frame(struct btrack * bt){
+int btrack_beat_due_in_current_frame(const struct btrack * bt){
     return bt->beatDueInFrame;
 }
 
-double btrack_get_bpm(struct btrack * bt){
+double btrack_get_bpm(const struct btrack * bt){
     return bt->estimatedTempo;
 }
 
-double btrack_get_latest_score(struct btrack * bt){
+double btrack_get_latest_score(const struct btrack * bt){
     return bt->latestCumulativeScoreValue;
 }
 
-double btrack_get_latest_odf(struct btrack * bt){
+double btrack_get_latest_odf(const struct btrack * bt){
     return bt->latestODF;
 }
 
-double btrack_get_latest_confidence(struct btrack * bt){
+double btrack_get_latest_confidence(const struct btrack * bt){
     return bt->latestConfidence;
 }
 
-int btrack_get_frames_until_beat(struct btrack * bt) {
+int btrack_get_frames_until_beat(const struct btrack * bt) {
     return bt->beatCounter;
 }
 
-void btrack_process_audio_frame(struct btrack * bt, double * frame){
-    double sample = odf_calculate_sample(&bt->odf, frame);
+double btrack_get_time_until_beat(const struct btrack * bt) {
+    double n_frames = btrack_get_frames_until_beat(bt);
+    return n_frames * bt->hopSize * bt->invSampleRate;
+}
+
+void btrack_process_audio_frame(struct btrack * bt, const btrack_chunk_t * frame){
+    double sample = odf_process_frame(&bt->odf, frame);
+    btrack_process_odf_sample(bt, sample);
+}
+
+void btrack_process_fft_frame(struct btrack * bt, const btrack_chunk_t * frame){
+    double sample = odf_process_fft_frame(&bt->odf, frame);
     btrack_process_odf_sample(bt, sample);
 }
 
@@ -256,15 +268,15 @@ void btrack_set_hop_size(struct btrack * bt, int hop_size){
 
     free(bt->onsetDF);
     bt->onsetDF = malloc(bt->onsetDFBufferSize * sizeof(double));
-    ASSERT(bt->onsetDF);
+    BTRACK_ASSERT(bt->onsetDF);
 
     free(bt->cumulativeScore);
     bt->cumulativeScore = malloc(bt->onsetDFBufferSize * sizeof(double));
-    ASSERT(bt->cumulativeScore);
+    BTRACK_ASSERT(bt->cumulativeScore);
 
     free(bt->w1);
     bt->w1 = malloc((1 + bt->onsetDFBufferSize) * sizeof(double));
-    ASSERT(bt->w1);
+    BTRACK_ASSERT(bt->w1);
 
     bt->onsetDFBufferSize = (512*512)/bt->hopSize;      // calculate df buffer size
     
@@ -285,7 +297,7 @@ void btrack_set_hop_size(struct btrack * bt, int hop_size){
 static void resampleOnsetDetectionFunction(struct btrack * bt) {
 	float output[512];
     float * input = malloc(bt->onsetDFBufferSize * sizeof(float));
-    ASSERT(input);
+    BTRACK_ASSERT(input);
     
     for (int i = 0;i < bt->onsetDFBufferSize;i++) {
         input[i] = (float) bt->onsetDF[i];
@@ -394,11 +406,11 @@ static void adaptiveThreshold(double * x, int N, double * aux_buffer) {
 	int p_post = 7;
 	int p_pre = 8;
 	
-	t = MIN(N,p_post);	// what is smaller, p_post of df size. This is to avoid accessing outside of arrays
+	t = BTRACK_MIN(N,p_post);	// what is smaller, p_post of df size. This is to avoid accessing outside of arrays
 	
 	// find threshold for first 't' samples, where a full average cannot be computed yet 
 	for (i = 0;i <= t;i++) {	
-		k = MIN((i+p_pre),N);
+		k = BTRACK_MIN((i+p_pre),N);
 		x_thresh[i] = calculateMeanOfArray(x,1,k);
 	}
 	// find threshold for bulk of samples across a moving average from [i-p_pre,i+p_post]
@@ -407,7 +419,7 @@ static void adaptiveThreshold(double * x, int N, double * aux_buffer) {
 	}
 	// for last few samples calculate threshold, again, not enough samples to do as above
 	for (i = N-p_post;i < N;i++) {
-		k = MAX((i-p_post),1);
+		k = BTRACK_MAX((i-p_post),1);
 		x_thresh[i] = calculateMeanOfArray(x,k,N);
 	}
 	
@@ -547,9 +559,9 @@ static void predictBeat(struct btrack * bt){
 	double futureCumulativeScore[bt->onsetDFBufferSize + windowSize + 1];
     double w2[windowSize + 1];
     //double * futureCumulativeScore = malloc((bt->onsetDFBufferSize + windowSize + 1) * sizeof(double));
-    //ASSERT(futureCumulativeScore);
+    //BTRACK_ASSERT(futureCumulativeScore);
     //double * w2 = malloc((windowSize + 1) * sizeof(double));
-    //ASSERT(w2);
+    //BTRACK_ASSERT(w2);
 
 	// copy cumscore to first part of fcumscore
 	for (int i = 0;i < bt->onsetDFBufferSize;i++) {

@@ -24,6 +24,7 @@
 #define __ONSETDETECTIONFUNCTION_H
 
 #include "fftw3.h"
+#include "common.h"
 
 //=======================================================================
 /** The type of onset detection function to calculate */
@@ -91,7 +92,8 @@ struct odf {
 int odf_init(struct odf * odf, int hop_size, int frame_size, enum OnsetDetectionFunctionType odf_type, enum WindowType window_type);
 void odf_del(struct odf * odf);
 
-double odf_calculate_sample(struct odf * odf, double * buffer);
+double odf_process_frame(struct odf * odf, const btrack_chunk_t * buffer);
+double odf_process_fft_frame(struct odf * odf, const btrack_chunk_t * fft_buffer); // XXX: This is not implemented yet
 void odf_set_type(struct odf * odf, enum OnsetDetectionFunctionType type);
 
 #endif

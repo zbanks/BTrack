@@ -47,8 +47,9 @@ static void calculateTukeyWindow(double * window, int frameSize);
 
 int odf_init(struct odf * odf, int hop_size, int frame_size, enum OnsetDetectionFunctionType odf_type, enum WindowType window_type){
     // if we have already initialised FFT plan
-    odf_del(odf);
+    //odf_del(odf);
 	
+    BTRACK_ASSERT(frame_size >= hop_size);
 	odf->hopSize = hop_size; // set hopsize
 	odf->frameSize = frame_size; // set framesize
 	
@@ -63,7 +64,7 @@ int odf_init(struct odf * odf, int hop_size, int frame_size, enum OnsetDetection
     odf->phase = malloc(sizeof(double) * frame_size);
     odf->prevPhase = malloc(sizeof(double) * frame_size);
     odf->prevPhase2 = malloc(sizeof(double) * frame_size);
-    ASSERT(odf->frame && odf->window && odf->magSpec && odf->prevMagSpec && odf->phase && odf->prevPhase && odf->prevPhase2);
+    BTRACK_ASSERT(odf->frame && odf->window && odf->magSpec && odf->prevMagSpec && odf->phase && odf->prevPhase && odf->prevPhase2);
 	
 	// set the window to the specified type
 	switch (window_type){
@@ -118,7 +119,7 @@ void odf_set_type(struct odf * odf, enum OnsetDetectionFunctionType type){
     odf->type = type;
 }
 
-double odf_calculate_sample(struct odf * odf, double * buffer){
+double odf_process_frame(struct odf * odf, const btrack_chunk_t * buffer){
 	double odfSample;
 		
 	// shift audio samples back in frame by hop size
@@ -189,6 +190,11 @@ double odf_calculate_sample(struct odf * odf, double * buffer){
 	return odfSample;
 }
 
+double odf_process_fft_frame(struct odf * odf, const btrack_chunk_t * buffer) {
+    // XXX TODO
+    return 0;
+}
+
 static void performFFT(struct odf * odf) {
 	int fsize2 = (odf->frameSize/2);
 	
@@ -229,7 +235,7 @@ static double energyDifference(struct odf * odf){
 	sample = sum - odf->prevEnergySum;	// sample is first order difference in energy
     odf->prevEnergySum = sum;
 	
-    return MIN(sample, 0);
+    return BTRACK_MIN(sample, 0);
 }
 
 static double spectralDifference(struct odf * odf){
