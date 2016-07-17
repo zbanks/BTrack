@@ -74,7 +74,10 @@ struct btrack {
 
 /** Constructor taking both hopSize and frameSize
 * @param hop_size the hop size in audio samples
+*   - hop_size determines how often the state is updated
 * @param frame_size the frame size in audio samples
+*   - frame_size samples are used to calculate the ODF
+* Constraint: hop_size <= frame_size
 */
 int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rate);
 void btrack_del(struct btrack * bt);
@@ -91,7 +94,13 @@ double btrack_get_latest_confidence(const struct btrack * bt);
 int btrack_get_frames_until_beat(const struct btrack * bt);
 double btrack_get_time_until_beat(const struct btrack * bt);
 
+// Reset the internal probability state to a given bpm
+// Useful for giving btrack a "hint" about the current bpm
+// Over time, the tempo can drift
 void btrack_set_bpm(struct btrack * bt, double bpm);
+
+// Lock the tempo to the given bpm
+// The tempo may have small deviations in order to correct for phase
 void btrack_fix_bpm(struct btrack * bt, double bpm);
 void btrack_nofix_bpm(struct btrack * bt);
 

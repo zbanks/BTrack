@@ -36,21 +36,23 @@ static void updateCumulativeScore(struct btrack * bt, double odfSample);
 static void predictBeat(struct btrack * bt);
 
 // Ex. hop_size = 512; frame_size = 1024
+// Notes:
+// - Tempo is tracked with granularity of 2 bpm from 80 bpm to 160 bpn (41 possible values)
 int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rate){
     int rc = 0;
     bt->hopSize = hop_size;
     bt->frameSize = frame_size;
     bt->invSampleRate = 1.0 / (double) sample_rate;
 
-    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceSq, HanningWindow); 
+    rc = odf_init(&bt->odf, hop_size, frame_size, ComplexSpectralDifferenceHWR, HanningWindow); 
     BTRACK_ASSERT(rc == 0);
 
     double rayparam = 43;
 	double pi = M_PI;
 	
 	// initialise parameters
-	bt->tightness = 5;
-	bt->alpha = 0.9;
+	bt->tightness = 5; // was 5
+	bt->alpha = 0.9; // was 0.9
 	bt->tempo = 120;
 	bt->estimatedTempo = 120.0;
 	bt->tempoToLagFactor = 60.* (double) sample_rate / (double) hop_size;
@@ -70,15 +72,23 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rat
 		bt->prevDelta[i] = 1;
 	}
 	
-	double t_mu = 41/2;
-	double m_sig;
-	double x;
+	// XXX: Why was this set!?!
+    // double t_mu = 41./2.;
+
 	// create tempo transition matrix
-	m_sig = 41/8;
+    // Gaussian weights centered at t_mu and stddev m_sig
+	//double m_sig = 41./8.;
+	double m_sig = 41./16.; // was 41/8
 	for (int i = 0;i < 41;i++) {
 		for (int j = 0;j < 41;j++) {
-			x = j+1;
-			t_mu = i+1;
+            // XXX Why +1?
+			//double x = j+1;
+			//double t_mu = i+1;
+            double x = j;
+            double t_mu = i;
+
+            // Transition from state i to state j
+            // \exp{ -(x - t_mu)^2 / (2 m_sig^2) } / (m_sig * \sqrt{ 2 \pi }
 			bt->tempoTransitionMatrix[i][j] = (1 / (m_sig * sqrt(2*pi))) * exp( (-1*pow((x-t_mu),2)) / (2*pow(m_sig,2)) );
 		}
 	}
@@ -453,6 +463,7 @@ static void calculateOutputOfCombFilterBank(struct btrack * bt) {
 	}
 }
 
+// Calculate the autocorrelation (ACF) with a bias correction factor
 static void calculateBalancedACF(double *onsetDetectionFunction, double * acf) {
 	int l, n = 0;
 	double sum, tmp;
@@ -489,6 +500,7 @@ static double calculateMeanOfArray(double *array, int startIndex,int endIndex) {
     }
 }
 
+// Normalize the array so that the sum is 1
 static void normaliseArray(double * array, int N){
 	double sum = 0;
 	
@@ -519,8 +531,9 @@ static void updateCumulativeScore(struct btrack * bt, double odfSample) {
 	
 	// create window
 	for (int i = 0;i < winsize;i++) {
+        // \exp{ -(tightness * \log{-v / beatPeriod}) ^ 2 } / 2
 		bt->w1[i] = exp((-1*pow(bt->tightness*log(-v/bt->beatPeriod),2))/2);
-		v = v+1;
+        v++;
 	}	
 	
 	// calculate new cumulative score value
@@ -571,6 +584,7 @@ static void predictBeat(struct btrack * bt){
 	// create future window
 	double v = 1;
 	for (int i = 0;i < windowSize;i++) {
+        // \exp{ -(v - beatPeriod/2) ^ 2 } / (2 * (beatPeriod / 2) ^ 2)
 		w2[i] = exp((-1*pow((v - (bt->beatPeriod/2)),2))   /  (2*pow((bt->beatPeriod/2) ,2)));
 		v++;
 	}
@@ -582,8 +596,9 @@ static void predictBeat(struct btrack * bt){
 	int pastwinsize = end-start+1;
 
 	for (int i = 0;i < pastwinsize;i++) {
+        // \exp{ -(tightness * \log{ -v / beatPeriod }) ^ 2 } / 2
 		bt->w1[i] = exp((-1*pow(bt->tightness*log(-v/bt->beatPeriod),2))/2);
-		v = v+1;
+		v++;
 	}
 
 	// calculate future cumulative score
