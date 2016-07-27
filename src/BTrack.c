@@ -55,7 +55,8 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rat
 	bt->alpha = 0.9; // was 0.9
 	bt->tempo = 120;
 	bt->estimatedTempo = 120.0;
-	bt->tempoToLagFactor = 60.* (double) sample_rate / (double) hop_size;
+	//bt->tempoToLagFactor = 60.* (double) sample_rate / (double) hop_size;
+	bt->tempoToLagFactor = 60.*44100./512.;
 	
 	bt->m0 = 10;
 	bt->beatCounter = -1;
@@ -78,7 +79,7 @@ int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rat
 	// create tempo transition matrix
     // Gaussian weights centered at t_mu and stddev m_sig
 	//double m_sig = 41./8.;
-	double m_sig = 41./16.; // was 41/8
+	double m_sig = 41/8; // was 41/8
 	for (int i = 0;i < 41;i++) {
 		for (int j = 0;j < 41;j++) {
             // XXX Why +1?
@@ -155,8 +156,12 @@ void btrack_process_odf_sample(struct btrack * bt, double odf_sample){
     // detection function sample is positive
     // add a tiny constant to the sample to stop it from ever going
     // to zero. this is to avoid problems further down the line
+    //printf("\nSAMPLE %0.6lf\n", odf_sample);
     odf_sample = fabs(odf_sample) + 0.0001;
     
+    static int n = 0;
+    n++;
+
 	bt->m0--;
 	bt->beatCounter--;
 	bt->beatDueInFrame = false;
@@ -173,6 +178,7 @@ void btrack_process_odf_sample(struct btrack * bt, double odf_sample){
 	
 	// update cumulative score
 	updateCumulativeScore(bt, odf_sample);
+    //printf("\nSCORE %0.6lf\n", bt->cumulativeScore[0]);
 	
 	// if we are halfway between beats
 	if (bt->m0 == 0) {
@@ -182,6 +188,7 @@ void btrack_process_odf_sample(struct btrack * bt, double odf_sample){
 	// if we are at a beat
 	if (bt->beatCounter == 0) {
 		bt->beatDueInFrame = true;	// indicate a beat should be output
+        //printf("beat: %0.3f %d\n", odf_sample, n);
 		
 		// recalculate the tempo
 		resampleOnsetDetectionFunction(bt);
@@ -277,15 +284,15 @@ void btrack_set_hop_size(struct btrack * bt, int hop_size){
 	bt->onsetDFBufferSize = (512*512)/bt->hopSize;		// calculate df buffer size
 
     free(bt->onsetDF);
-    bt->onsetDF = malloc(bt->onsetDFBufferSize * sizeof(double));
+    bt->onsetDF = calloc(bt->onsetDFBufferSize, sizeof(double));
     BTRACK_ASSERT(bt->onsetDF);
 
     free(bt->cumulativeScore);
-    bt->cumulativeScore = malloc(bt->onsetDFBufferSize * sizeof(double));
+    bt->cumulativeScore = calloc(bt->onsetDFBufferSize, sizeof(double));
     BTRACK_ASSERT(bt->cumulativeScore);
 
     free(bt->w1);
-    bt->w1 = malloc((1 + bt->onsetDFBufferSize) * sizeof(double));
+    bt->w1 = calloc((1 + bt->onsetDFBufferSize), sizeof(double));
     BTRACK_ASSERT(bt->w1);
 
     bt->onsetDFBufferSize = (512*512)/bt->hopSize;      // calculate df buffer size
@@ -306,8 +313,7 @@ void btrack_set_hop_size(struct btrack * bt, int hop_size){
 
 static void resampleOnsetDetectionFunction(struct btrack * bt) {
 	float output[512];
-    float * input = malloc(bt->onsetDFBufferSize * sizeof(float));
-    BTRACK_ASSERT(input);
+    float input[bt->onsetDFBufferSize];
     
     for (int i = 0;i < bt->onsetDFBufferSize;i++) {
         input[i] = (float) bt->onsetDF[i];
@@ -334,7 +340,6 @@ static void resampleOnsetDetectionFunction(struct btrack * bt) {
 	for (int i = 0;i < output_len;i++) {
 		bt->resampledOnsetDF[i] = (double) src_data.data_out[i];
 	}
-    free(input);
 }
 
 static void calculateTempo(struct btrack * bt){
@@ -639,6 +644,7 @@ static void predictBeat(struct btrack * bt){
 		
 	// set next prediction time
 	bt->m0 = bt->beatCounter+round(bt->beatPeriod/2);
+    //printf("WC %0.6f %d %0.2f %d\n", wcumscore, bt->beatCounter, bt->beatPeriod, bt->m0);
 
     //free(futureCumulativeScore);
     //free(w2);
