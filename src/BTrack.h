@@ -25,6 +25,10 @@
 
 #include "OnsetDetectionFunction.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //=======================================================================
 /** The main beat tracking class and the interface to the BTrack
  * beat tracking algorithm. The algorithm can process either
@@ -96,5 +100,9 @@ void btrack_fix_bpm(struct btrack * bt, double bpm);
 void btrack_nofix_bpm(struct btrack * bt);
 
 void btrack_set_hop_size(struct btrack * bt, int hop_size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
