@@ -46,6 +46,7 @@ static void calculateBlackmanWindow(double * window, int frameSize);
 static void calculateTukeyWindow(double * window, int frameSize);          
 
 int odf_init(struct odf * odf, int hop_size, int frame_size, enum OnsetDetectionFunctionType odf_type, enum WindowType window_type){
+    memset(odf, 0, sizeof *odf);
     // if we have already initialised FFT plan
     //odf_del(odf);
 	

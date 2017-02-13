@@ -37,6 +37,7 @@ static void predictBeat(struct btrack * bt);
 
 // Ex. hop_size = 512; frame_size = 1024
 int btrack_init(struct btrack * bt, int hop_size, int frame_size, int sample_rate){
+    memset(bt, 0, sizeof *bt);
     int rc = 0;
     bt->hopSize = hop_size;
     bt->frameSize = frame_size;
