@@ -22,6 +22,7 @@
 
 #include "OnsetDetectionFunction.h"
 #include "common.h"
+#include <string.h>
 
 static void performFFT(struct odf * odf);
 static double princarg(double phaseVal);

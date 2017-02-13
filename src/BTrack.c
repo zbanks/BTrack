@@ -23,6 +23,7 @@
 #include "BTrack.h"
 #include "samplerate.h"
 #include "common.h"
+#include <string.h>
 
 
 static void resampleOnsetDetectionFunction(struct btrack * bt);
