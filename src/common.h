@@ -2,8 +2,9 @@
 #define __BTRACK_COMMON_H
 
 #include <math.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef float btrack_chunk_t;
 
