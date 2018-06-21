@@ -47,17 +47,17 @@ struct btrack {
     double acf[512];                        /**<  to hold autocorrelation function */
     double weightingVector[128];            /**<  to hold weighting vector */
     double combFilterBankOutput[128];       /**<  to hold comb filter output */
-    double tempoObservationVector[41];      /**<  to hold tempo version of comb filter output */
-	
-    double delta[41];                       /**<  to hold final tempo candidate array */
-    double prevDelta[41];                   /**<  previous delta */
-    double prevDeltaFixed[41];              /**<  fixed tempo version of previous delta */
-	
-    double tempoTransitionMatrix[41][41];   /**<  tempo transition matrix */
-    
+    double tempoObservationVector[51];      /**<  to hold tempo version of comb filter output */
+
+    double delta[51];                       /**<  to hold final tempo candidate array */
+    double prevDelta[51];                   /**<  previous delta */
+    double prevDeltaFixed[51];              /**<  fixed tempo version of previous delta */
+
+    double tempoTransitionMatrix[51][51];   /**<  tempo transition matrix */
+
 	//=======================================================================
     // parameters
-    
+
     double tightness;                       /**< the tightness of the weighting used to calculate cumulative score */
     double alpha;                           /**< the mix between the current detection function sample and the cumulative score's "momentum" */
     double beatPeriod;                      /**< the beat period, in detection function samples */
