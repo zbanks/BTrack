@@ -19,4 +19,5 @@ typedef float btrack_chunk_t;
 #define BTRACK_STRINGIFY2(x) #x
 #define BTRACK_ASSERT(x) if(!(x)){fprintf(stderr,"Error, assertion failed: " __FILE__ " line %d: " BTRACK_STRINGIFY(x) "\n", __LINE__); exit(EXIT_FAILURE);}
 
+#define BTRACK_ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #endif
